@@ -1,0 +1,7 @@
+{
+  "name": "Owning The Look",
+  "description": "A high-end fashion discovery platform that uses AI to identify and shop clothing from any image.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
