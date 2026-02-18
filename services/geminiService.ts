@@ -16,7 +16,13 @@ export async function analyzeFashionImage(base64Data: string): Promise<AnalysisR
           },
         },
         {
-          text: "You are a professional fashion curator. Analyze this image and identify all distinct clothing items and accessories. Return a structured JSON object with a 'mainItem' and a list of 'detectedItems'. For each item, provide a category, title, color, material, and a concise search query."
+          text: `You are a professional fashion buyer. Analyze this image and extract the clothing items.
+          
+          For the 'query' field, generate a search term that is likely to find results in a retail database. 
+          IMPORTANT: Use 2-3 keywords maximum. 
+          Example: Instead of "Vintage distressed high-waisted blue boyfriend jeans", use "Blue straight jeans".
+          
+          This helps find results even if the user is only joined to a few brands on Awin.`
         }
       ]
     },
@@ -58,10 +64,9 @@ export async function analyzeFashionImage(base64Data: string): Promise<AnalysisR
 
   const rawJson = JSON.parse(response.text || '{}');
   
-  // Post-process to add IDs
   const result: AnalysisResult = {
     mainItem: { ...rawJson.mainItem, id: 'main' },
-    detectedItems: rawJson.detectedItems.map((item: any, idx: number) => ({
+    detectedItems: (rawJson.detectedItems || []).map((item: any, idx: number) => ({
       ...item,
       id: `det-${idx}`
     }))
