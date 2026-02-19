@@ -7,7 +7,7 @@
   <title>OWNING THE LOOK - AI Fashion Discovery</title>
   <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Lato:wght@300;400;700&display=swap" rel="stylesheet" />
-  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&display=swap" rel="stylesheet" />
   <script>
     window.tailwind.config = {
       theme: {
@@ -37,7 +37,7 @@
     }
   </script>
   <style>
-    body { font-family: 'Lato', sans-serif; background-color: #fdfbf7; }
+    body { font-family: 'Lato', sans-serif; background-color: #fdfbf7; margin: 0; }
     h1, h2, h3, h4, h5, h6 { font-family: 'Playfair Display', serif; }
     .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24; }
     .glass-panel {
@@ -47,14 +47,14 @@
       -webkit-backdrop-filter: blur(12px);
       border: 1px solid rgba(255, 255, 255, 0.4);
     }
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
     .skeleton-shimmer {
       background: linear-gradient(90deg, #f0ede6 25%, #fdfbf7 50%, #f0ede6 75%);
       background-size: 200% 100%;
       animation: shimmer 2s infinite;
-    }
-    @keyframes shimmer {
-      0% { background-position: 200% 0; }
-      100% { background-position: -200% 0; }
     }
   </style>
 <script type="importmap">
@@ -63,13 +63,15 @@
     "react": "https://esm.sh/react@^19.2.4",
     "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
     "react/": "https://esm.sh/react@^19.2.4/",
-    "@google/genai": "https://esm.sh/@google/genai@^1.41.0",
-    "@netlify/functions": "https://esm.sh/@netlify/functions@^5.1.2"
+    "@netlify/functions": "https://esm.sh/@netlify/functions@^5.1.2",
+    "@google/genai": "https://esm.sh/@google/genai@^1.41.0"
   }
 }
 </script>
 </head>
 <body>
   <div id="root"></div>
+  <!-- EL SCRIPT DE ABAJO ES CRUCIAL PARA QUE NO SE VEA EN BLANCO -->
+  <script type="module" src="./index.tsx"></script>
 </body>
 </html>

@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { AnalysisResult, ProductMatch, FashionItem } from '../types';
 import { searchAwinProducts } from '../services/awinService';
 import { searchRakutenProducts } from '../services/rakutenService';
+import { searchSkimlinksProducts } from '../services/skimlinksService';
 
 interface ResultsViewProps {
   sourceImage: string;
@@ -20,15 +21,20 @@ const ResultsView: React.FC<ResultsViewProps> = ({ sourceImage, analysis, onNewS
       setIsLoading(true);
       
       try {
-        // Ejecutamos ambas búsquedas en paralelo para mayor velocidad
-        const [awinResults, rakutenResults] = await Promise.all([
+        // Ejecutamos todas las búsquedas en paralelo para máxima eficiencia
+        const [awinResults, rakutenResults, skimResults] = await Promise.all([
           searchAwinProducts(activeItem),
-          searchRakutenProducts(activeItem)
+          searchRakutenProducts(activeItem),
+          searchSkimlinksProducts(activeItem)
         ]);
         
-        // Combinamos resultados (puedes priorizar uno u otro aquí)
-        const combined = [...rakutenResults, ...awinResults];
-        setMatches(combined);
+        // Combinamos resultados eliminando duplicados si fuera necesario
+        const combined = [...rakutenResults, ...awinResults, ...skimResults];
+        
+        // Ordenar: primero los que tengan imagen, luego por precio
+        const sorted = combined.sort((a, b) => (a.imageUrl ? -1 : 1));
+        
+        setMatches(sorted);
       } catch (err) {
         setMatches([]);
       } finally {
@@ -87,7 +93,7 @@ const ResultsView: React.FC<ResultsViewProps> = ({ sourceImage, analysis, onNewS
           <div className="mb-12">
              <div className="flex items-center gap-2 mb-2">
                 <span className="h-1.5 w-1.5 rounded-full bg-green-500"></span>
-                <span className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Live Partner Inventory</span>
+                <span className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Live Affiliate Network Inventory</span>
              </div>
             <h1 className="text-4xl font-serif text-neutral-dark leading-tight">
               Shop the <span className="italic">{activeItem.title}</span>
@@ -106,7 +112,7 @@ const ResultsView: React.FC<ResultsViewProps> = ({ sourceImage, analysis, onNewS
           ) : matches.length === 0 ? (
             <div className="py-24 text-center border-2 border-dashed border-border-color rounded-3xl">
               <p className="text-gray-400 font-serif italic text-lg">No products found for this specific item yet.</p>
-              <p className="text-[10px] uppercase tracking-widest mt-4 text-accent font-bold">Try selecting a different piece from the look</p>
+              <p className="text-[10px] uppercase tracking-widest mt-4 text-accent font-bold">Try selecting a different piece or updating your API credentials</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-16">
@@ -116,13 +122,19 @@ const ResultsView: React.FC<ResultsViewProps> = ({ sourceImage, analysis, onNewS
                     <img 
                       alt={match.title} 
                       className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" 
-                      src={match.imageUrl} 
+                      src={match.imageUrl || "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&q=80&w=400&h=550"} 
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&q=80&w=400&h=550";
+                      }}
                     />
+                    {match.isOnSale && (
+                      <span className="absolute top-4 right-4 bg-red-600 text-white text-[9px] font-bold px-2 py-1 uppercase tracking-widest rounded-full">Sale</span>
+                    )}
                   </div>
                   <div className="flex justify-between items-start mb-4">
                     <div className="flex-grow pr-4">
                       <p className="text-[9px] text-accent uppercase tracking-widest font-bold mb-1">{match.store}</p>
-                      <h3 className="text-sm font-bold text-neutral-dark leading-tight group-hover:text-accent transition-colors">{match.title}</h3>
+                      <h3 className="text-sm font-bold text-neutral-dark leading-tight group-hover:text-accent transition-colors truncate">{match.title}</h3>
                     </div>
                     <div className="text-right">
                       <p className="text-lg font-serif italic text-neutral-dark">${match.price.toFixed(2)}</p>
