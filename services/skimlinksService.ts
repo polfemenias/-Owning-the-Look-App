@@ -3,26 +3,29 @@ import { ProductMatch, FashionItem } from "../types";
 
 export async function searchSkimlinksProducts(item: FashionItem): Promise<ProductMatch[]> {
   try {
-    // Limpiamos la query: la IA a veces es demasiado específica. 
-    // Si la query tiene más de 4 palabras, probamos con una versión más corta.
     const searchTerms = item.query.split(' ');
     const optimizedQuery = searchTerms.length > 3 ? searchTerms.slice(0, 3).join(' ') : item.query;
 
-    console.log(`[Skimlinks] Buscando: "${optimizedQuery}" (Original: "${item.query}")`);
+    console.log(`[Skimlinks] Requesting: "${optimizedQuery}"`);
 
     const response = await fetch(`/.netlify/functions/search?network=skimlinks&query=${encodeURIComponent(optimizedQuery)}`);
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error("[Skimlinks] Error en la función de Netlify:", errorData);
+    // Verificamos si la respuesta es JSON antes de parsear
+    const contentType = response.headers.get("content-type");
+    if (!contentType || !contentType.includes("application/json")) {
+      const textError = await response.text();
+      console.error("[Skimlinks] Server didn't return JSON. Response:", textError.substring(0, 100));
       return [];
     }
 
     const data = await response.json();
-    console.log("[Skimlinks] Respuesta cruda de la API:", data);
     
+    if (data.error) {
+      console.error("[Skimlinks] Error desde el servidor:", data.error);
+      return [];
+    }
+
     if (!data.products || !Array.isArray(data.products)) {
-      console.warn("[Skimlinks] No se encontraron productos o el formato es incorrecto.");
       return [];
     }
 
@@ -38,7 +41,7 @@ export async function searchSkimlinksProducts(item: FashionItem): Promise<Produc
       isOnSale: !!p.price_old && parseFloat(p.price_old) > parseFloat(p.price)
     }));
   } catch (error) {
-    console.error("[Skimlinks] Error fatal en el servicio:", error);
+    console.error("[Skimlinks] Fetch failed:", error);
     return [];
   }
 }
