@@ -8,12 +8,13 @@ export const handler: Handler = async (event) => {
     return { statusCode: 400, body: JSON.stringify({ error: 'Missing query' }) };
   }
 
-  // Credenciales desde variables de entorno
   const RAKUTEN_TOKEN = process.env.RAKUTEN_ACCESS_TOKEN;
   const AWIN_TOKEN = process.env.AWIN_API_TOKEN;
   const AWIN_PUB_ID = process.env.AWIN_PUBLISHER_ID;
   const SKIM_KEY = process.env.SKIMLINKS_API_KEY;
   const SKIM_PUB_ID = process.env.SKIMLINKS_PUBLISHER_ID;
+
+  console.log(`[Backend] Iniciando búsqueda en ${network} para: ${query}`);
 
   try {
     let response;
@@ -34,26 +35,33 @@ export const handler: Handler = async (event) => {
     }
 
     else if (network === 'skimlinks' && SKIM_KEY && SKIM_PUB_ID) {
-      // API de Skimlinks: Búsqueda de productos
-      const skimUrl = `https://api-search.skimlinks.com/v1/products?key=${SKIM_KEY}&publisher_id=${SKIM_PUB_ID}&q=${encodeURIComponent(query)}&limit=10&country=US`;
+      // Importante: El país 'US' es muy restrictivo. Si no hay resultados, Skimlinks devuelve vacío.
+      // Probamos sin país o con un límite mayor para asegurar que traiga algo.
+      const skimUrl = `https://api-search.skimlinks.com/v1/products?key=${SKIM_KEY}&publisher_id=${SKIM_PUB_ID}&q=${encodeURIComponent(query)}&limit=20`;
       response = await fetch(skimUrl);
       data = await response.json();
     }
 
     if (!response || !response.ok) {
+      const errorText = await response?.text();
+      console.error(`[Backend] Error de API en ${network}:`, errorText);
       return { 
         statusCode: response?.status || 500, 
-        body: JSON.stringify({ error: 'Partner API error or missing configuration' }) 
+        body: JSON.stringify({ error: `Partner API error: ${errorText}`, network }) 
       };
     }
 
     return {
       statusCode: 200,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*' 
+      },
       body: JSON.stringify(data)
     };
 
   } catch (error: any) {
+    console.error(`[Backend] Error excepcional en ${network}:`, error);
     return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
   }
 };

@@ -15,35 +15,41 @@ const ResultsView: React.FC<ResultsViewProps> = ({ sourceImage, analysis, onNewS
   const [activeItem, setActiveItem] = useState<FashionItem>(analysis.mainItem);
   const [matches, setMatches] = useState<ProductMatch[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [debugInfo, setDebugInfo] = useState<string>("");
+
+  const fetchMatches = async (item: FashionItem) => {
+    setIsLoading(true);
+    setDebugInfo(`Buscando resultados para: ${item.query}...`);
+    
+    try {
+      const [awinResults, rakutenResults, skimResults] = await Promise.all([
+        searchAwinProducts(item),
+        searchRakutenProducts(item),
+        searchSkimlinksProducts(item)
+      ]);
+      
+      const combined = [...rakutenResults, ...awinResults, ...skimResults];
+      const sorted = combined.sort((a, b) => (a.imageUrl ? -1 : 1));
+      
+      setMatches(sorted);
+      setDebugInfo(`Búsqueda finalizada. Skimlinks trajo ${skimResults.length} productos.`);
+    } catch (err) {
+      setMatches([]);
+      setDebugInfo("Error durante la búsqueda. Revisa la consola.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchMatches = async () => {
-      setIsLoading(true);
-      
-      try {
-        // Ejecutamos todas las búsquedas en paralelo para máxima eficiencia
-        const [awinResults, rakutenResults, skimResults] = await Promise.all([
-          searchAwinProducts(activeItem),
-          searchRakutenProducts(activeItem),
-          searchSkimlinksProducts(activeItem)
-        ]);
-        
-        // Combinamos resultados eliminando duplicados si fuera necesario
-        const combined = [...rakutenResults, ...awinResults, ...skimResults];
-        
-        // Ordenar: primero los que tengan imagen, luego por precio
-        const sorted = combined.sort((a, b) => (a.imageUrl ? -1 : 1));
-        
-        setMatches(sorted);
-      } catch (err) {
-        setMatches([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchMatches();
+    fetchMatches(activeItem);
   }, [activeItem]);
+
+  const handleBroadenSearch = () => {
+    // Si la búsqueda específica falla, probamos solo con la categoría (ej: "Sweater")
+    const broaderItem = { ...activeItem, query: activeItem.category };
+    fetchMatches(broaderItem);
+  };
 
   const handleShopNow = (match: ProductMatch) => {
     if (match.affiliateUrl) {
@@ -55,7 +61,7 @@ const ResultsView: React.FC<ResultsViewProps> = ({ sourceImage, analysis, onNewS
     <div className="mx-auto max-w-7xl px-6 lg:px-12 py-12 animate-fadeIn">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-16">
         
-        {/* Panel Izquierdo: Resumen del Look */}
+        {/* Panel Izquierdo */}
         <div className="lg:col-span-4 space-y-10">
           <div className="sticky top-28">
             <div className="group relative rounded-2xl overflow-hidden shadow-elegant bg-neutral-900 mb-8 border border-border-color">
@@ -88,12 +94,15 @@ const ResultsView: React.FC<ResultsViewProps> = ({ sourceImage, analysis, onNewS
           </div>
         </div>
 
-        {/* Panel Derecho: Resultados de Compra Reales */}
+        {/* Panel Derecho */}
         <div className="lg:col-span-8">
           <div className="mb-12">
-             <div className="flex items-center gap-2 mb-2">
-                <span className="h-1.5 w-1.5 rounded-full bg-green-500"></span>
-                <span className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Live Affiliate Network Inventory</span>
+             <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <span className={`h-1.5 w-1.5 rounded-full ${isLoading ? 'bg-yellow-500 animate-ping' : 'bg-green-500'}`}></span>
+                  <span className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Live Inventory Sync</span>
+                </div>
+                <span className="text-[9px] text-gray-300 font-mono">{debugInfo}</span>
              </div>
             <h1 className="text-4xl font-serif text-neutral-dark leading-tight">
               Shop the <span className="italic">{activeItem.title}</span>
@@ -110,9 +119,18 @@ const ResultsView: React.FC<ResultsViewProps> = ({ sourceImage, analysis, onNewS
               ))}
             </div>
           ) : matches.length === 0 ? (
-            <div className="py-24 text-center border-2 border-dashed border-border-color rounded-3xl">
-              <p className="text-gray-400 font-serif italic text-lg">No products found for this specific item yet.</p>
-              <p className="text-[10px] uppercase tracking-widest mt-4 text-accent font-bold">Try selecting a different piece or updating your API credentials</p>
+            <div className="py-24 text-center border-2 border-dashed border-border-color rounded-3xl bg-neutral-50/50">
+              <span className="material-symbols-outlined text-4xl text-gray-300 mb-4">search_off</span>
+              <p className="text-gray-400 font-serif italic text-lg px-8">We couldn't find exact matches for "{activeItem.query}"</p>
+              <div className="mt-8 flex flex-col items-center gap-4">
+                <button 
+                  onClick={handleBroadenSearch}
+                  className="px-8 py-3 bg-white border border-neutral-dark text-[10px] uppercase tracking-widest font-bold rounded-full hover:bg-neutral-dark hover:text-white transition-all shadow-sm"
+                >
+                  Try Broader Search ({activeItem.category})
+                </button>
+                <p className="text-[9px] text-gray-400 uppercase tracking-tighter">Tip: Check your browser console (F12) to see API logs</p>
+              </div>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-16">
@@ -122,7 +140,7 @@ const ResultsView: React.FC<ResultsViewProps> = ({ sourceImage, analysis, onNewS
                     <img 
                       alt={match.title} 
                       className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" 
-                      src={match.imageUrl || "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&q=80&w=400&h=550"} 
+                      src={match.imageUrl} 
                       onError={(e) => {
                         (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&q=80&w=400&h=550";
                       }}

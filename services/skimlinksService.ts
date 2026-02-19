@@ -3,15 +3,26 @@ import { ProductMatch, FashionItem } from "../types";
 
 export async function searchSkimlinksProducts(item: FashionItem): Promise<ProductMatch[]> {
   try {
-    // Ahora llamamos a nuestra función segura de Netlify
-    const response = await fetch(`/.netlify/functions/search?network=skimlinks&query=${encodeURIComponent(item.query)}`);
+    // Limpiamos la query: la IA a veces es demasiado específica. 
+    // Si la query tiene más de 4 palabras, probamos con una versión más corta.
+    const searchTerms = item.query.split(' ');
+    const optimizedQuery = searchTerms.length > 3 ? searchTerms.slice(0, 3).join(' ') : item.query;
 
-    if (!response.ok) return [];
+    console.log(`[Skimlinks] Buscando: "${optimizedQuery}" (Original: "${item.query}")`);
+
+    const response = await fetch(`/.netlify/functions/search?network=skimlinks&query=${encodeURIComponent(optimizedQuery)}`);
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error("[Skimlinks] Error en la función de Netlify:", errorData);
+      return [];
+    }
 
     const data = await response.json();
+    console.log("[Skimlinks] Respuesta cruda de la API:", data);
     
-    // Mapeo de la estructura de Skimlinks a ProductMatch
     if (!data.products || !Array.isArray(data.products)) {
+      console.warn("[Skimlinks] No se encontraron productos o el formato es incorrecto.");
       return [];
     }
 
@@ -27,7 +38,7 @@ export async function searchSkimlinksProducts(item: FashionItem): Promise<Produc
       isOnSale: !!p.price_old && parseFloat(p.price_old) > parseFloat(p.price)
     }));
   } catch (error) {
-    console.error("Error fetching from Skimlinks:", error);
+    console.error("[Skimlinks] Error fatal en el servicio:", error);
     return [];
   }
 }
