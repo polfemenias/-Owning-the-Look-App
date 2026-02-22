@@ -20,7 +20,7 @@ export interface ProductMatch {
   id: string;
   title: string;
   store: string;
-  price: number;
+  price: number | string;
   oldPrice?: number;
   imageUrl: string;
   affiliateUrl?: string; // Nuevo: URL para redireccionar a la tienda

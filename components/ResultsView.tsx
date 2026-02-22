@@ -1,9 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { AnalysisResult, ProductMatch, FashionItem } from '../types';
-import { searchAwinProducts } from '../services/awinService';
-import { searchRakutenProducts } from '../services/rakutenService';
-import { searchSkimlinksProducts } from '../services/skimlinksService';
+import { searchAmazonProducts } from '../services/amazonService';
 
 interface ResultsViewProps {
   sourceImage: string;
@@ -22,17 +20,12 @@ const ResultsView: React.FC<ResultsViewProps> = ({ sourceImage, analysis, onNewS
     setDebugInfo(`Buscando resultados para: ${item.query}...`);
     
     try {
-      const [awinResults, rakutenResults, skimResults] = await Promise.all([
-        searchAwinProducts(item),
-        searchRakutenProducts(item),
-        searchSkimlinksProducts(item)
-      ]);
+      const amazonResults = await searchAmazonProducts(item);
       
-      const combined = [...rakutenResults, ...awinResults, ...skimResults];
-      const sorted = combined.sort((a, b) => (a.imageUrl ? -1 : 1));
+      const sorted = amazonResults.sort((a, b) => (a.imageUrl ? -1 : 1));
       
       setMatches(sorted);
-      setDebugInfo(`Búsqueda finalizada. Skimlinks trajo ${skimResults.length} productos.`);
+      setDebugInfo(`Búsqueda finalizada. Amazon trajo ${amazonResults.length} productos.`);
     } catch (err) {
       setMatches([]);
       setDebugInfo("Error durante la búsqueda. Revisa la consola.");
@@ -155,7 +148,9 @@ const ResultsView: React.FC<ResultsViewProps> = ({ sourceImage, analysis, onNewS
                       <h3 className="text-sm font-bold text-neutral-dark leading-tight group-hover:text-accent transition-colors truncate">{match.title}</h3>
                     </div>
                     <div className="text-right">
-                      <p className="text-lg font-serif italic text-neutral-dark">${match.price.toFixed(2)}</p>
+                      <p className="text-lg font-serif italic text-neutral-dark">
+                        {typeof match.price === 'number' ? `$${match.price.toFixed(2)}` : match.price}
+                      </p>
                     </div>
                   </div>
                   <button 

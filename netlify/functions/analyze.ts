@@ -8,10 +8,10 @@ export const handler: Handler = async (event) => {
   }
 
   const { image } = JSON.parse(event.body || '{}');
-  const API_KEY = process.env.API_KEY;
+  const API_KEY = process.env.GEMINI_API_KEY;
 
   if (!API_KEY) {
-    return { statusCode: 500, body: JSON.stringify({ error: 'API Key not configured in Netlify' }) };
+    return { statusCode: 500, body: JSON.stringify({ error: 'GEMINI_API_KEY not configured in Netlify' }) };
   }
 
   const ai = new GoogleGenAI({ apiKey: API_KEY });
